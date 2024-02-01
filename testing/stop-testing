@@ -10,6 +10,7 @@ NETWORKS="vnet1 vnet2 vnet3"
 KNLTARGET=/var/run/kvm-swan-kernel
 HOSTFSTARGET=/var/run/kvm-swan-hostfs
 TESTRESULTSTARGET=/var/run/kvm-swan-testresults
+#HOSTSRC=/var/run/kvm-strongswan
 
 [ `id -u` -eq 0 ] || die "You must be root to run $0"
 
@@ -39,5 +40,21 @@ execute "rm $KNLTARGET"
 log_action "Removing link to hostfs"
 execute "rm $HOSTFSTARGET"
 
+#log_action "Removing link to hostfs-src"
+#execute "rm $HOSTSRC"
+
 log_action "Removing link to testresults"
 execute "rm $TESTRESULTSTARGET"
+
+# Remove /etc/hosts entries
+sudo sed -i '/^# DNS resolver for libvirt VM.*$/d' /etc/hosts >/dev/null
+
+current_host=$(hostname)
+for host in $STRONGSWANHOSTS
+do
+# Exclude the current hostname from deletion
+    if [ "$host" != "$current_host" ]; then
+        # Remove ipv4_${host} entry
+        sudo sed -i "/^.*${host}\$/d" /etc/hosts >/dev/null
+    fi
+done

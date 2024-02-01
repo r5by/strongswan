@@ -5,3 +5,9 @@ Upon the successful establishment of the IPsec tunnel, the updown script automat
 inserts iptables-based firewall rules that let pass the tunneled traffic.
 In order to test both tunnel and firewall, client <b>alice</b> behind gateway <b>moon</b>
 pings client <b>bob</b> located behind gateway <b>sun</b>.
+
+Initiator SPI: 5672d425b777a0a6
+Responder SPI: 19c15e80f3ab12fd
+Shared key: 0sv+NkxY9LLZvwj4qCC2o/gGrWDF2d21jL
+Auth : aes128-sha256-x25519
+ESP Crypto: aes128gcm128-x25519

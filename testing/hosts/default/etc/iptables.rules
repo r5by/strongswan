@@ -5,6 +5,10 @@
 -P OUTPUT DROP
 -P FORWARD DROP
 
+# Add gdbserver
+-A INPUT -i eth0 -p tcp --dport 1234 -j ACCEPT
+-A OUTPUT -o eth0 -p tcp --dport 1234 -j ACCEPT
+
 # allow esp
 -A INPUT  -i eth0 -p 50 -j ACCEPT
 -A OUTPUT -o eth0 -p 50 -j ACCEPT

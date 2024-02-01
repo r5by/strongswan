@@ -5,4 +5,7 @@ echo "Building root image"
 DIR=$(dirname `readlink -f $0`)
 . $DIR/../testing.conf
 
-$DIR/build-strongswan --all --replace --no-guests --tarball $SWANVERSION
+SRCDIR="/home/xad/code/strongswan"
+$DIR/build-strongswan --replace --no-guests --clean $SRCDIR # build from local source?
+#$DIR/build-strongswan --all --replace --no-guests --tarball $SWANVERSION  # orig (from remote wget tar)
+#$DIR/build-strongswan --replace --no-guests --tarball $SWANVERSION  #only build swan?

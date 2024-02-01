@@ -9,6 +9,7 @@ CONFDIR=$DIR/config/kvm
 KNLSRC=$BUILDDIR/$KERNEL/arch/x86/boot/bzImage
 KNLTARGET=/var/run/kvm-swan-kernel
 HOSTFSTARGET=/var/run/kvm-swan-hostfs
+#HOSTSRC=/var/run/kvm-strongswan
 TESTRESTULSTARGET=/var/run/kvm-swan-testresults
 MCASTBRS="test-br0 test-br1"
 
@@ -26,6 +27,9 @@ execute "ln -fs $KNLSRC $KNLTARGET"
 log_action "Deploying $SHAREDDIR as hostfs"
 execute "chown -R $KVMUSER:$KVMGROUP $SHAREDDIR" 0
 execute "ln -Tfs $SHAREDDIR $HOSTFSTARGET"
+
+#log_action "Deploying $SHAREDSRC as hostfs"
+#execute "ln -Tfs $SHAREDSRC $HOSTSRC"
 
 [ -d $TESTRESULTSDIR ] || mkdir $TESTRESULTSDIR
 log_action "Deploying $TESTRESULTSDIR as hostfs"
@@ -56,3 +60,15 @@ done
 
 echo 0x08 > /sys/devices/virtual/net/test-br0/bridge/group_fwd_mask
 
+# Adding `ip hostname` entries into /etc/hosts
+# s.t. ssh into vm's being easy: e.g. `ssh root@moon`
+echo "# DNS resolver for libvirt VM's (strongswan testing)" | sudo tee -a /etc/hosts >/dev/null
+for host in $STRONGSWANHOSTS
+do
+	eval ipv4_${host}="`echo $HOSTNAMEIPV4 | sed -n -e "s/^.*${host},//gp" | awk -F, '{ print $1 }' | awk '{ print $1 }'`"
+	eval ipv6_${host}="`echo $HOSTNAMEIPV6 | sed -n -e "s/^.*${host},//gp" | awk -F, '{ print $1 }' | awk '{ print $1 }'`"
+
+  ipv4_addr=ipv4_${host}
+  echo "${!ipv4_addr} ${host}" | sudo tee -a /etc/hosts >/dev/null
+
+done

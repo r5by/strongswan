@@ -14,6 +14,8 @@
 # or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
 # for more details.
 
+#set -x
+
 echo "Creating guest images"
 
 DIR=$(dirname `readlink -f $0`)
