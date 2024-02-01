@@ -37,6 +37,11 @@
       <address type='pci' domain='0x0000' bus='0x00' slot='0x08' function='0x0'/>
     </filesystem>
     <filesystem type='mount' accessmode='mapped'>
+      <source dir='/var/run/kvm-strongswan'/>
+      <target dir='/hostsrc'/>
+      <address type='pci' domain='0x0000' bus='0x00' slot='0x0a' function='0x0'/>
+    </filesystem>
+    <filesystem type='mount' accessmode='mapped'>
       <source dir='/var/run/kvm-swan-testresults'/>
       <target dir='/testresults'/>
       <address type='pci' domain='0x0000' bus='0x00' slot='0x09' function='0x0'/>

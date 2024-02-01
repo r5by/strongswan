@@ -9,7 +9,7 @@ CONFDIR=$DIR/config/kvm
 KNLSRC=$BUILDDIR/$KERNEL/arch/x86/boot/bzImage
 KNLTARGET=/var/run/kvm-swan-kernel
 HOSTFSTARGET=/var/run/kvm-swan-hostfs
-#HOSTSRC=/var/run/kvm-strongswan
+HOSTSRC=/var/run/kvm-strongswan
 TESTRESTULSTARGET=/var/run/kvm-swan-testresults
 MCASTBRS="test-br0 test-br1"
 
@@ -28,8 +28,8 @@ log_action "Deploying $SHAREDDIR as hostfs"
 execute "chown -R $KVMUSER:$KVMGROUP $SHAREDDIR" 0
 execute "ln -Tfs $SHAREDDIR $HOSTFSTARGET"
 
-#log_action "Deploying $SHAREDSRC as hostfs"
-#execute "ln -Tfs $SHAREDSRC $HOSTSRC"
+log_action "Deploying $SHAREDSRC as hostfs"
+execute "ln -Tfs $SHAREDSRC $HOSTSRC"
 
 [ -d $TESTRESULTSDIR ] || mkdir $TESTRESULTSDIR
 log_action "Deploying $TESTRESULTSDIR as hostfs"
