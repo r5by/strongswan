@@ -306,7 +306,7 @@ void process_request(private_vici_dispatcher_t *this, char *name, u_int id,
 
 CALLBACK(inbound, void,
 	private_vici_dispatcher_t *this, u_int id, chunk_t data)
-{
+{//NOTE> vici callback function that is invoked when user space raise "swanctl" cmd
 	bio_reader_t *reader;
 	chunk_t chunk;
 	uint8_t type;

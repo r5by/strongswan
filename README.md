@@ -692,3 +692,247 @@ suffix `.crl`.
 With the cached copy the CRL is immediately available after startup.  When the
 local copy has become stale, an updated CRL is automatically fetched from one of
 the defined CRL distribution points during the next IKEv2 authentication.
+
+
+### Connect gdb Debugger to Test Suite ###
+
+Rich examples of applying strongswan IPsec in practice are provided in `cd testing` folder. It
+can be useful for newbie developer to follow the setups there and be able to step into the code 
+implementation while plugin one's own debugger with hand. `testing/README` provides basic
+introductions of building, loading and verifying all test cases. However, to connect gdb to 
+gdbserver running inside these VM's, the following settings should be prepared:
+
+1) Adding supporting linux packets (for Ubuntu 22.04) in `testing/scripts/build-baseimage`:
+```bash
+INC=$INC,libpcap-dev,nmap,gdbserver 
+```
+2) Update filesystem automount point for default host image in `testing/hosts/default/etc/fstab`:
+```bash
+   /hostsrc /root/strongswan 9p trans=virtio,version=9p2000.L 0 0    
+```
+Then, update iptable rules to allow _gdbserver_ to operate in `testing/hosts/iptables.rules`:
+```bash
+# Allow incoming connections on port 1234 for GDB server
+-A INPUT -p tcp --dport 1234 -j ACCEPT
+-A OUTPUT -p tcp --sport 1234 -j ACCEPT
+```
+3) Modify _libvirtd_ hosts' configurations in `testing/config/kvm` so that the VM filesystem
+may recognize the strongswan source later on:
+```xml
+    <filesystem type='mount' accessmode='mapped'>
+      <source dir='/var/run/kvm-strongswan'/>
+      <target dir='/hostsrc'/>
+      <address type='pci' domain='0x0000' bus='0x00' slot='0x09' function='0x0'/>
+    </filesystem>
+```
+4) Modify the actual `start-testing` and `stop-testing` shell scripts to enable gdbserver related
+tasks. (skipped, use `git`to verify)
+
+After these modification, rebuild testing environment
+
+    sudo ./make-testting
+
+> Sometimes building guest images may fail due to lazy unmounting the previously mounted points.
+> Turnoff other configurations but only `: ${ENABLE_BUILD_GUESTIMAGES=yes}` in `testing/testing.conf` file
+> and remake the testing to solve this problem
+
+Tips:
+
+* If somehow the building procedure fails in between stages, check the following to make sure
+a clear-stage for next try-out:
+
+```bash
+    # 1) Clear leftover VM's
+    $ virsh list   # check if all vm's are shutdown
+    $ virsh destroy xxx  # destroy whatever remains..
+    
+    # 2) Umount leftovers
+    $ mount  # check if all mount points are successfully detached
+    $ umount  xxx  # unmount the unwanted from BOTTOM TO TOP (avoid "mount point is busy" someshit)
+```
+
+* Don't forget to put `sudo` in front of all testing related command, and don't forget
+to shutdown the test environment by issuing command `sudo ./stop-testing`. 
+
+* To avoid strict host key checking whenever connect to the VM's, modify the `~/.ssh/config` file as following:
+```bash
+    Host xxx
+        StrictHostKeyChecking no
+        
+    # Then, ssh to xxx shouldn't let you choose `yes` or `no`
+    $ ssh root@xxx
+```
+
+Now its ready for you to connect any remote VM's via gdb. Take `testing/tests/ike2/net2net-psk` as
+an example, issue the following commands in order:
+```bash
+    # on host
+    $ virsh list # verify no testing environment has started yet
+    $ sudo ./start-testing  # start testing env
+    $ sudo scripts/load-testconfig ikev2/net2net-psk  # load the configuration
+    $ ssh root@moon
+    
+    # on guest vm `moon`: 
+    # BEFORE following gdbserver command, pls follow steps specified in:
+    # ikev2/net2net-psk/console.log
+    # for each VM hosts, for example, you may see user stories like:
+    # PRE-TEST
+    # moon# iptables-restore < /etc/iptables.rules
+    # sun# iptables-restore < /etc/iptables.rules
+    # moon# cd /etc/swanctl; rm rsa/* x509/* x509ca/*
+    # sun# cd /etc/swanctl; rm rsa/* x509/* x509ca/*
+    # ...
+    $ gdbserver :1234 swanctl --initiate --child net-net
+    
+    # on host (should be able to connect the server)
+    $ gdb /usr/local/sbin/swanctl -ex "target extended-remote 192.168.0.1:1234"
+    
+    # feel free to mess up with your gdb command line tool to step through code...
+```
+
+> Navigate the [here](https://www.strongswan.org/testresults.html) for all available strongswan test cases.
+
+Use wireshark to capture the IPsec packets passed on-and-off between VM's, for example, you may
+order wireshark to sniff on `moon-eth0` in the above test case, and filter packets via:
+
+```bash
+    ip.addr==192.168.0.1 and (isakmp or esp)
+```
+
+### Some Interesting Debug Information ###
+
+There are multiple ways of starting `charon` IKE deamon for strongswan, the recommended way (up
+to the time this article is written) is via `vici` interface plugin:
+
+```bash
+  ls /lib/systemd/system |grep strongswan
+  
+  cat /lib/systemd/system/strongswan.service
+```
+
+The output shows:
+
+```bash
+[Unit]
+Description=strongSwan IPsec IKEv1/IKEv2 daemon using swanctl
+After=network-online.target
+
+[Service]
+Type=notify
+ExecStart=/usr/local/sbin/charon-systemd
+ExecStartPost=/usr/local/sbin/swanctl --load-all --noprompt
+ExecReload=/usr/local/sbin/swanctl --reload
+ExecReload=/usr/local/sbin/swanctl --load-all --noprompt
+Restart=on-abnormal
+
+[Install]
+WantedBy=multi-user.target
+Alias=strongswan-swanctl.service
+```
+
+or through legacy `ipsec` shell script: 
+
+```bash
+  # Call: $ cat /lib/systemd/system/strongswan-starter.service
+[Unit]
+Description=strongSwan IPsec IKEv1/IKEv2 daemon using ipsec.conf
+After=syslog.target network-online.target
+
+[Service]
+ExecStart=/usr/local/sbin/ipsec start --nofork
+Restart=on-abnormal
+
+[Install]
+WantedBy=multi-user.target
+```
+
+Inspect into the `ipsec` script shows:
+
+```bash
+#! /bin/sh 
+# prefix command to run stuff from our programs directory
+...
+# set daemon name 
+[ -z "$DAEMON_NAME" ] && DAEMON_NAME="charon"
+
+IPSEC_DIR="/usr/local/libexec/ipsec"
+IPSEC_STARTER="${IPSEC_DIR}/starter"
+
+case "$1" in
+...
+start)  
+        shift   
+        if [ -d /var/lock/subsys ]; then 
+                touch /var/lock/subsys/ipsec 
+        fi      
+        exec $IPSEC_STARTER --daemon $DAEMON_NAME "$@" 
+        ;;
+...
+```
+
+### Clion IDE Integration ###
+
+Several changes have to be made before using CLion as our development IDE. Open `setting->Build,Execution,Deployment->Makefile`
+and modify the following in `Commands` window:
+
+```bash
+    which autoreconf >/dev/null && autoreconf --install --force --verbose "${PROJECT_DIR:-..}" 2>&1; /bin/sh "${PROJECT_DIR:-..}/configure" --enable-systemd --enable-swanctl
+```
+
+This helps prepare the project makefile building environment for `systemd` service, so that
+later when we inspect `charon-systemd.c`, CLion editor won't complain about "The file does not belong to any project target..."
+
+### Logging ###
+
+To instrument charon and enable the full [logging](https://docs.strongswan.org/docs/6.0/config/logging.html) capability of strongswan, the compiling option should be turned on firstly,
+
+```bash
+# configure.ac
+
+# ===========================
+#  set up compiler and flags
+# ===========================
+
+if test -z "$CFLAGS"; then
+	CFLAGS="-g -O0 -DDEBUG_LEVEL=4"
+fi
+
+```
+
+Then recompile the root image following README in `tests` folder and edit `strongswan.conf` to configure logging for a specific target.
+
+For example, if we want to verify logging details in `moon` host during the test case `net2net-gw`, we need to update the `testing/tests/ikev2/net2net-gw/hosts/moon/etc/strongswan.conf` file
+as follows:
+
+```bash
+# /etc/strongswan.conf - strongSwan configuration file
+
+swanctl {
+  load = pem pkcs1 x509 revocation constraints pubkey openssl random
+}
+
+charon-systemd {
+  load = random nonce aes sha1 sha2 hmac kdf pem pkcs1 x509 revocation curve25519 gmp curl kernel-netlink socket-default updown vici
+}
+
+charon {
+  filelog {
+     charon{
+        path = /var/log/charon.log
+	    time_format = %b %e %T
+	    ike_name = yes
+        append = no
+        default = 2
+        flush_line = yes
+     }
+     stderr {
+	time_format = %b %e %T
+	dmn = 4
+	ike = 2
+	knl = 3
+     }
+  }
+}
+```
+
+Then issue `sudo ./do-tests ikev2/net2net-gw` or its sub-procedure `sudo scripts/load-testconfig ikev2/net2net-gw` shall upload this configuration upto the VM.

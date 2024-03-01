@@ -105,6 +105,7 @@ CONFIG_OPTS = \
 	--enable-sha3 \
 	--enable-newhope \
 	--enable-systemd \
+	--enable-swanctl \
 	--enable-counters \
 	--enable-save-keys \
 	--enable-python-eggs \

@@ -370,7 +370,7 @@ fi
 # ===========================
 
 if test -z "$CFLAGS"; then
-	CFLAGS="-g -O0"
+	CFLAGS="-mno-avx2 -g -O0 -DDEBUG_LEVEL=4"
 fi
 AC_SUBST(PLUGIN_CFLAGS)
 AC_PROG_CC

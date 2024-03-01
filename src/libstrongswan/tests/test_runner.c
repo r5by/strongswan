@@ -662,6 +662,8 @@ static bool run_case(test_case_t *tcase, test_runner_init_t init, char *cfg,
 				{
 					if (run_test(tfun, i))
 					{
+//              fprintf(stderr, "--> SHOULD SEE THIS <-- \n");
+
 						if (call_fixture(tcase, FALSE, i))
 						{
 							ok = TRUE;
@@ -718,8 +720,10 @@ static bool run_case(test_case_t *tcase, test_runner_init_t init, char *cfg,
 	}
 	enumerator->destroy(enumerator);
 
+//  fprintf(stderr, "BEFORE checking total_time \n");
 	if (total_time)
 	{
+//    fprintf(stderr, "IN checking total_time \n");
 		fprintf(stderr, " %s%s%.3f ms%s", tty_escape_get(2, TTY_BOLD),
 				TTY(BLUE), total_time, tty_escape_get(2, TTY_RESET));
 		if (ti > 1)
@@ -732,6 +736,7 @@ static bool run_case(test_case_t *tcase, test_runner_init_t init, char *cfg,
 			fprintf(stderr, "]%s", TTY(DEF));
 		}
 	}
+//  fprintf(stderr, "OUT checking total_time \n");
 	fprintf(stderr, "\n");
 
 	print_failures(warnings, TRUE);
