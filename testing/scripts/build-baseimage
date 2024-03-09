@@ -1,5 +1,4 @@
 #!/bin/bash
-
 echo "Building base image"
 
 DIR=$(dirname `readlink -f $0`)

@@ -126,6 +126,9 @@ do_on_exit()
 # wait for a mount to disappear
 # $1 - device/image to wait for
 # $2 - maximum time to wait in seconds, default is 5 seconds
+# Use the magic -l option to umount to get rid of the following issue (without need to rebooting the system):
+# Error: Partition(s) 1 on /dev/nbd0 have been written, but we have been unable to inform the kernel of the change, probably because it/they are in use.
+# As a result, the old partition(s) will remain in use.  You should reboot now before making further changes.
 graceful_umount()
 {
 	secs=$2
@@ -134,7 +137,7 @@ graceful_umount()
 	let steps=$secs*100
 	for st in `seq 1 $steps`
 	do
-		umount $1 >>$LOGFILE 2>&1
+		umount -l $1 >>$LOGFILE 2>&1
 		mount | grep $1 >/dev/null 2>&1
 		[ $? -eq 0 ] || return 0
 		sleep 0.01

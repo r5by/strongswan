@@ -115,17 +115,17 @@ partprobe $NBDEV
 
 log_action "Mounting $NBDPARTITION to $LOOPDIR"
 execute "mount $NBDPARTITION $LOOPDIR"
-do_on_exit umount $LOOPDIR
+do_on_exit graceful_umount $LOOPDIR
 
 log_action "Mounting proc filesystem to $LOOPDIR/proc"
 execute "mount -t proc none $LOOPDIR/proc"
-do_on_exit umount $LOOPDIR/proc
+do_on_exit graceful_umount $LOOPDIR/proc
 
 mkdir -p $SHAREDDIR
 mkdir -p $LOOPDIR/root/shared
 log_action "Mounting $SHAREDDIR as /root/shared"
 execute "mount -o bind $SHAREDDIR $LOOPDIR/root/shared"
-do_on_exit umount $LOOPDIR/root/shared
+do_on_exit graceful_umount $LOOPDIR/root/shared
 
 log_action "Copy /etc/resolv.conf"
 execute "cp /etc/resolv.conf $LOOPDIR/etc/resolv.conf"
@@ -142,7 +142,7 @@ if [ -z "$TARBALL" ]; then
 	mkdir -p $LOOPDIR/root/strongswan
 	log_action "Mounting $SWANDIR as /root/strongswan"
 	execute "bindfs -u $SRCUID -g $SRCGID --create-for-user=$SRCUID --create-for-group=$SRCGID $SWANDIR $LOOPDIR/root/strongswan"
-	do_on_exit umount $LOOPDIR/root/strongswan
+	do_on_exit graceful_umount $LOOPDIR/root/strongswan
 
 	log_action "Determine strongSwan version"
 	desc=`runuser -u $SRCUSER -- git -C $SWANDIR describe --exclude 'android-*' --dirty`

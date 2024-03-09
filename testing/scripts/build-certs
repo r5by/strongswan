@@ -1,4 +1,5 @@
 #!/bin/bash
+# set -x
 
 DIR="$(dirname `readlink -f $0`)/.."
 . $DIR/testing.conf
@@ -26,16 +27,16 @@ partprobe $NBDEV
 
 log_action "Mounting $NBDPARTITION to $LOOPDIR"
 execute "mount $NBDPARTITION $LOOPDIR"
-do_on_exit umount $LOOPDIR
+do_on_exit graceful_umount $LOOPDIR
 
 log_action "Mounting proc filesystem to $LOOPDIR/proc"
 execute "mount -t proc none $LOOPDIR/proc"
-do_on_exit umount $LOOPDIR/proc
+do_on_exit graceful_umount $LOOPDIR/proc
 
 mkdir -p $LOOPDIR/root/testing
 log_action "Mounting ${DIR} as /root/testing"
 execute "bindfs -u $SRCUID -g $SRCGID --create-for-user=$SRCUID --create-for-group=$SRCGID ${DIR} $LOOPDIR/root/testing"
-do_on_exit umount $LOOPDIR/root/testing
+do_on_exit graceful_umount $LOOPDIR/root/testing
 
 log_action "Building certificates"
 execute_chroot "/root/testing/scripts/build-certs-chroot"
