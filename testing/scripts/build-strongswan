@@ -94,10 +94,12 @@ case "$GUEST" in
 "")
 	if [ ! -f "$ROOTIMG" -o "$REPLACE" ]; then
 		log_action "Creating root image $ROOTIMG"
+#		echo "qemu-img create -b $BASEIMG -f $IMGEXT -F $IMGEXT $ROOTIMG"
 		execute "qemu-img create -b $BASEIMG -f $IMGEXT -F $IMGEXT $ROOTIMG"
 		ALL_RECIPES=1
 	fi
 	log_action "Connecting root image to NBD device $NBDEV"
+#	echo "qemu-nbd -c $NBDEV $ROOTIMG"
 	[ -f "$ROOTIMG" ] || die "Root image $ROOTIMG not found"
 	execute "qemu-nbd -c $NBDEV $ROOTIMG"
 	;;
@@ -106,6 +108,7 @@ case "$GUEST" in
 	GUESTIMG="$IMGDIR/$GUEST.$IMGEXT"
 	[ -f "$GUESTIMG" ] || die "Guest image $GUESTIMG not found"
 	log_action "Connecting guest image to NBD device $NBDEV"
+#	echo "qemu-nbd -c $NBDEV $GUESTIMG"
 	execute "qemu-nbd -c $NBDEV $GUESTIMG"
 	;;
 esac
@@ -114,10 +117,12 @@ do_on_exit qemu-nbd -d $NBDEV
 partprobe $NBDEV
 
 log_action "Mounting $NBDPARTITION to $LOOPDIR"
+#echo "mount $NBDPARTITION $LOOPDIR"
 execute "mount $NBDPARTITION $LOOPDIR"
 do_on_exit graceful_umount $LOOPDIR
 
 log_action "Mounting proc filesystem to $LOOPDIR/proc"
+#echo "mount -t proc none $LOOPDIR/proc"
 execute "mount -t proc none $LOOPDIR/proc"
 do_on_exit graceful_umount $LOOPDIR/proc
 
@@ -191,6 +196,8 @@ do
 		cp $RECPDIR/$r ${LOOPDIR}/root/shared/compile
 		execute_chroot "make SWANVERSION=$TARBALL -C /root/shared/compile -f $r"
 	fi
+
+	# sleep 3
 done
 
 # rebuild the guest images after we modified the root image
